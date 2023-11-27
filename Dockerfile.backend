@@ -1,0 +1,21 @@
+FROM maven:3.8-jdk-11
+
+ARG GITHUB_ORG
+ARG OH_CORE_BRANCH
+ARG OH_API_BRANCH
+
+RUN apt-get update
+RUN apt-get install -y git
+
+ADD ./deps/openhospital-core /openhospital-core
+WORKDIR ./openhospital-core
+RUN --mount=type=cache,target=/root/.m2 mvn clean install -DskipTests=true
+
+WORKDIR /
+RUN git clone --depth=1 -b $OH_API_BRANCH https://github.com/informatici/openhospital-api.git
+ADD ./rsc /openhospital-api/rsc
+WORKDIR ./openhospital-api
+RUN --mount=type=cache,target=/root/.m2 mvn clean install -DskipTests=true
+
+WORKDIR ./target
+CMD java -cp "openhospital-api-0.1.0.jar:rsc/:static/" org.springframework.boot.loader.JarLauncher
